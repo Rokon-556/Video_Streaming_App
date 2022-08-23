@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:streaming_app/video.dart';
 import 'package:video_player/video_player.dart';
@@ -17,17 +18,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   late VideoPlayerController _videoPlayerController;
   bool _playArea = false;
-  // late ChewieController _chewieController;
-  // double _aspectRatio = 16 / 9;
   String? _thumbTempPath;
-
-  @override
-  void initState() {
-    super.initState();
-    _initPlayer(init: true);
-    getVideoThumbnail();
-  
-  }
 
   final video = [
     Video(
@@ -50,13 +41,10 @@ class _MyHomePageState extends State<MyHomePage> {
             'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4')
   ];
 
-
-
-
-  void getVideoThumbnail() async {
+  void getVideoThumbnail({String url = '', int index = 1}) async {
     _thumbTempPath = await VideoThumbnail.thumbnailFile(
-      video:
-          "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+      video: video[index].thumbnail,
+      //"http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
       thumbnailPath: (await getTemporaryDirectory()).path,
       imageFormat: ImageFormat.WEBP,
       maxHeight:
@@ -75,7 +63,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     _videoPlayerController = VideoPlayerController.network(video[index].url)
-    // ..addListener(() { })
       ..addListener(() => setState(() {}))
       ..setLooping(true)
       ..initialize().then((value) => _videoPlayerController.play());
@@ -94,33 +81,44 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+
+    getVideoThumbnail();
+
+    _initPlayer(init: true);
+  }
+
+  @override
   void dispose() {
     _videoPlayerController.dispose();
+    // setAllOrientation();
     super.dispose();
   }
 
-  _showLogoutDialog(BuildContext context) {
+  _showFeedbackDialog(BuildContext context) {
     showDialog(
         context: context,
         builder: (BuildContext context) {
           return CupertinoAlertDialog(
-            title: const Text("Logout"),
-            content: const Text("Are you sure to logout"),
+            title: const Text("Feedback"),
+            content: const Text("Do you like the content"),
             actions: <Widget>[
               CupertinoDialogAction(
                 child: const Text("No"),
-                onPressed: () =>
-                  Navigator.of(context).pop()
-                ,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
               ),
               CupertinoDialogAction(
                 child: const Text(
-                  "Play Audio",
-                  style:  TextStyle(color: Colors.red),
+                  "Yes",
+                  style: const TextStyle(color: Colors.red),
                 ),
-                onPressed: () =>
-                  _videoPlayerController.play()
-                ,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _videoPlayerController.play();
+                },
               ),
             ],
           );
@@ -133,6 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(" Streaming App"),
+        centerTitle: true,
       ),
       body: Column(
         children: [
@@ -141,11 +140,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   height: 300,
                   width: double.infinity,
                   color: Colors.deepPurpleAccent,
-                  child:  const Center(
+                  child: const Center(
                     child: Text(
                       'Tap Any from the list\nVideo will Appear ',
-                      style:
-                          TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
                     ),
                   ),
                 )
@@ -157,25 +158,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           children: [
                             SizedBox(
                               height: 200,
-                              child: AspectRatio(
-                                aspectRatio: 16.0 / 9.0,
-                                child: VideoPlayer(_videoPlayerController),
-                                // ValueListenableBuilder(
-                                //     valueListenable: _videoPlayerController,
-                                //     builder: (context, VideoPlayerValue value,
-                                //         child) {
-                                //       if (value.position.inSeconds > 10) {
-                                //         _videoPlayerController.pause();
-                                //          //_showLogoutDialog(context);
-                                //          return SizedBox();
-                                //       } else {
-                                //         return VideoPlayer(
-                                //             _videoPlayerController);
-                                //       }
-                                //     }),
-                                //VideoPlayer(_videoPlayerController)
-                              ),
-                              //child: Chewie(controller: _chewieController),
+                              child: VideoPlayer(_videoPlayerController),
                             ),
                             const SizedBox(
                               height: 12,
@@ -187,10 +170,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                     valueListenable: _videoPlayerController,
                                     builder: (context, VideoPlayerValue value,
                                         child) {
-                                      // if (value.position.inSeconds > 10) {
-                                      //   _videoPlayerController.pause();
-                                      //    _showLogoutDialog(context);
-                                      // }
+                                      Future.delayed(Duration(seconds: 10), () {
+                                        _videoPlayerController.pause();
+                                        _showFeedbackDialog(context);
+                                      });
+
                                       return Text(
                                         _videoDuration(value.position),
                                         style: const TextStyle(
@@ -271,17 +255,17 @@ class _MyHomePageState extends State<MyHomePage> {
                                   },
                                 ),
                                 IconButton(
-                                  icon: Icon(
-                                    _videoPlayerController.value.isPlaying
-                                        ? Icons.pause
-                                        : Icons.play_arrow,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () =>
+                                    icon: Icon(
+                                      _videoPlayerController.value.isPlaying
+                                          ? Icons.pause
+                                          : Icons.play_arrow,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed: () {
                                       _videoPlayerController.value.isPlaying
                                           ? _videoPlayerController.pause()
-                                          : _videoPlayerController.play(),
-                                ),
+                                          : _videoPlayerController.play();
+                                    }),
                                 IconButton(
                                   icon: const Icon(
                                     Icons.arrow_forward,
@@ -296,12 +280,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                         .seekTo(targetPosition);
                                   },
                                 ),
-                                IconButton(
-                                    onPressed: () {},
-                                    icon: const Icon(
-                                      Icons.fullscreen,
-                                      color: Colors.white,
-                                    ))
                               ],
                             ),
                           ],
@@ -316,81 +294,73 @@ class _MyHomePageState extends State<MyHomePage> {
               child: ListView.builder(
                 itemCount: video.length,
                 itemBuilder: ((context, index) {
-                  return _videoList(index, context);
+                  return GestureDetector(
+                    onTap: () {
+                      debugPrint('tapped $index');
+                      setState(() {
+                        if (_playArea == false) {
+                          _playArea = true;
+                          _initPlayer(index: index);
+                        }
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              SizedBox(
+                                height: 100,
+                                width: 100,
+                                //child: Image.network(video[index].thumbnail),
+                                child: Image.file(File(_thumbTempPath!)),
+                              ),
+                              const SizedBox(
+                                width: 15,
+                              ),
+                              Expanded(
+                                child: Text(
+                                  video[index].name,
+                                  style: const TextStyle(fontSize: 25),
+                                ),
+                              )
+                            ],
+                          ),
+                          const SizedBox(
+                            height: 5,
+                          ),
+                          Center(
+                            child: Row(
+                              children: [
+                                for (int i = 0; i <= 100; i++)
+                                  i.isEven
+                                      ? Container(
+                                          width: 3,
+                                          height: 1,
+                                          decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(2),
+                                              color: Theme.of(context)
+                                                  .primaryColor),
+                                        )
+                                      : Container(
+                                          width: 3,
+                                          height: 1,
+                                          color: Colors.white,
+                                        ),
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  );
                 }),
               ),
             ),
         ],
       ),
     );
-  }
-
-  GestureDetector _videoList(int index, BuildContext context) {
-    return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      if (_playArea == false) {
-                        _playArea = true;
-                        _initPlayer(index: index);
-                      }
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            SizedBox(
-                              height: 100,
-                              width: 100,
-                              //child: Image.network(video[index].thumbnail),
-                              child: Image.file(File(_thumbTempPath!)),
-                              // Image.file(
-                              //  // video[index].thumbnail,
-                              //  File(getVideoThumbnail(video[index].thumbnail)),
-                              //   fit: BoxFit.contain,
-                              // ),
-                            ),
-                            const SizedBox(
-                              width: 15,
-                            ),
-                            Expanded(
-                              child: Text(
-                                video[index].name,
-                                style: const TextStyle(fontSize: 25),
-                              ),
-                            )
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 5,
-                        ),
-                        Center(
-                          child: Row(
-                            children: [
-                              for (int i = 0; i <= 100; i++)
-                                i.isEven
-                                    ? Container(
-                                        width: 3,
-                                        height: 1,
-                                        decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                            color: Theme.of(context)
-                                                .primaryColor),
-                                      )
-                                    : Container(
-                                        width: 3,
-                                        height: 1,
-                                        color: Colors.white,
-                                      ),
-                            ],
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                );
   }
 }
